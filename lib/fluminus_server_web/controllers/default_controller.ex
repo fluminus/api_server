@@ -11,6 +11,8 @@ end
 defmodule PeriodicTask do
   use GenServer
 
+  require Logger
+
   @fetch_interval 5000
   @limit 1
   @renew_count 20
@@ -116,6 +118,8 @@ end
 
 defmodule FluminusServerWeb.DefaultController do
   use FluminusServerWeb, :controller
+
+  require Logger
 
   def index(conn, _params) do
     text(conn, "connected!")
