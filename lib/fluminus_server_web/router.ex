@@ -7,7 +7,7 @@ defmodule FluminusServerWeb.Router do
 
   scope "/api", FluminusServerWeb do
     pipe_through :api
-    get "/get_jwt", DefaultController, :get_jwt
     post "/activate_pn", DefaultController, :activate_pn
+    delete "/deactivate_pn", DefaultController, :deactivate_pn
   end
 end
