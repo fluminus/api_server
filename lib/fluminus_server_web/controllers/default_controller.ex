@@ -110,6 +110,11 @@ end
 defmodule FluminusServerWeb.DefaultController do
   use FluminusServerWeb, :controller
 
+  def index(conn, _params) do
+    text(conn, "connected!")
+  end
+
+  @spec deactivate_pn(Plug.Conn.t(), any) :: Plug.Conn.t()
   def deactivate_pn(conn, params) do
     case params do
       %{"idsrv" => idsrv, "jwt" => jwt} ->

@@ -5,6 +5,7 @@
 ## Database config
 
 ```sql
+use fluminus_server
 create table if not exists fluminus_server_dev.pn(
 	username varchar(255),
   idsrv varchar(1023),
@@ -39,6 +40,37 @@ create table if not exists fluminus_server_dev.notification(
   "jwt": "jwt"
 }
 ```
+
+## Production mode
+
+* Configure `prod.secret.exs` file
+
+```elixir
+config :fluminus_server, FluminusServerWeb.Endpoint,
+http: [:inet6, port: String.to_integer(System.get_env("API_SERVER_PORT") || "23333")],
+secret_key_base: secret_key_base
+```
+
+* Configure `prod.exs` file
+
+```elixir
+config :fluminus_server, FluminusServerWeb.Endpoint,
+url: [host: "your_running_url", port: 23333],
+cache_static_manifest: "priv/static/cache_manifest.json"
+```
+
+* Some commands
+
+```bash
+export API_SERVER_PORT=23333
+mix phx.gen.secret
+export SECRET_KEY_BASE=[the secret generated just now]
+export DATABASE_URL=ecto://[username]:[password]@localhost/[database_name]
+mix deps.get --only prod
+MIX_ENV=prod mix phx.server
+```
+
+## Extras
 
 To start your Phoenix server:
 
