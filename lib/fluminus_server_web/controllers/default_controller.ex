@@ -94,7 +94,7 @@ defmodule PeriodicTask do
               DateTime.utc_now()
               |> DateTime.to_time()
               |> Time.to_iso8601()
-            IO.puts("Updated at #{time}")
+            IO.puts("Updated for #{state.auth.user_id} at #{time}")
             Process.send_after(self(), :tick, @fetch_interval)
             {:noreply, %{auth: state.auth, count: state.count+1}}
 
@@ -152,7 +152,7 @@ defmodule FluminusServerWeb.DefaultController do
   @spec activate_pn(Plug.Conn.t(), any) :: Plug.Conn.t()
   def activate_pn(conn, params) do
     case params do
-      %{"idsrv" => idsrv, "jwt" => jwt} ->
+      %{"idsrv" => idsrv, "jwt" => jwt, "fcm_token" => fcm_token} ->
         auth = %Fluminus.Authorization{
           client: %Fluminus.HTTPClient{
             cookies: %{"idsrv" => idsrv}
@@ -167,14 +167,17 @@ defmodule FluminusServerWeb.DefaultController do
                 query_string =
                   "INSERT INTO pn VALUES (\"#{map["userID"]}\", \"#{
                     renewed_auth.client.cookies["idsrv"]
-                  }\", \"#{renewed_auth.jwt}\", curtime())"
-                SQL.query(FluminusServer.Repo, query_string, [])
-                GenServer.start(PeriodicTask, %Authorization{
-                  idsrv: renewed_auth.client.cookies["idsrv"],
-                  jwt: renewed_auth.jwt,
-                  user_id: map["userID"]
-                })
-                conn |> send_resp(201, "Enabled push notification for " <> map["userID"])
+                  }\", \"#{renewed_auth.jwt}\", \"#{fcm_token}\", curtime())"
+                case SQL.query(FluminusServer.Repo, query_string, []) do
+                  {:ok, _} ->
+                    GenServer.start(PeriodicTask, %Authorization{
+                      idsrv: renewed_auth.client.cookies["idsrv"],
+                      jwt: renewed_auth.jwt,
+                      user_id: map["userID"]
+                    })
+                    conn |> send_resp(201, "Enabled push notification for " <> map["userID"])
+                  _ -> :error
+                end
 
               _ ->
                 conn |> send_resp(500, "")
