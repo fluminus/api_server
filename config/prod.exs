@@ -11,7 +11,6 @@ use Mix.Config
 # before starting your production server.
 config :fluminus_server, FluminusServerWeb.Endpoint,
   url: [host: "localhost", port: 23333],
-  cache_static_manifest: "priv/static/cache_manifest.json"
 
 # Do not print debug messages in production
 config :logger, level: :info

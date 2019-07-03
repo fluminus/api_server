@@ -13,6 +13,7 @@ defmodule PeriodicTask do
 
   @fetch_interval 5000
   @limit 1
+  @renew_count 20
 
   def init(opts) do
     case opts do
@@ -37,7 +38,7 @@ defmodule PeriodicTask do
     }} = SQL.query(FluminusServer.Repo, query_string, [])
     rows = Enum.at(Enum.at(rows,0),0)
     if rows == 0 do
-      IO.puts("Stopped pn for #{state.auth.user_id}")
+      Logger.info("Stopped pn for #{state.auth.user_id}")
       {:stop, :normal, state}
     else
       auth = %Fluminus.Authorization{
@@ -52,24 +53,30 @@ defmodule PeriodicTask do
             Enum.each(resp["data"], fn ann ->
               query_string =
                 "INSERT INTO notification VALUES (\"#{state.auth.user_id}\", #{ann["id"]})"
-              # IO.puts(query_string)
               SQL.query(FluminusServer.Repo, query_string, [])
-              # IO.inspect(ann["id"])
             end)
-            # IO.inspect(resp)
             time =
               DateTime.utc_now()
               |> DateTime.to_time()
               |> Time.to_iso8601()
-            IO.puts("Initialized db for #{state.auth.user_id} at #{time}")
+            Logger.info("Initialized db for #{state.auth.user_id} at #{time}")
             Process.send_after(self(), :tick, @fetch_interval)
             {:noreply, %{auth: state.auth, count: state.count+1}}
 
           {:error, reason} ->
-            IO.inspect(reason)
+            Logger.error(Kernel.inspect(reason))
             {:noreply, state}
         end
       else
+        if rem(state.count, @renew_count) == 0 do
+          case Fluminus.Authorization.renew_jwt(auth) do
+            {:ok, renewed_auth} ->
+              auth = renewed_auth
+              Logger.info("Renewed JWT for #{state.auth.user_id}")
+            {:error, reason} ->
+              Logger.error("Failed to renew JWT for #{state.auth.user_id}")
+          end
+        end
         case Fluminus.API.api(auth, "/notification?sortby=recordDate%20desc&limit=#{@limit}") do
           {:ok, resp} ->
             Enum.each(resp["data"], fn ann ->
@@ -87,19 +94,19 @@ defmodule PeriodicTask do
                 query_string =
                   "INSERT INTO notification VALUES (\"#{state.auth.user_id}\", #{ann["id"]})"
                 SQL.query(FluminusServer.Repo, query_string, [])
-                IO.inspect(ann)
+                Logger.info(Kernel.inspect(ann))
               end
             end)
             time =
               DateTime.utc_now()
               |> DateTime.to_time()
               |> Time.to_iso8601()
-            IO.puts("Updated for #{state.auth.user_id} at #{time}")
+            Logger.info("Updated for #{state.auth.user_id} at #{time}")
             Process.send_after(self(), :tick, @fetch_interval)
             {:noreply, %{auth: state.auth, count: state.count+1}}
 
           {:error, reason} ->
-            IO.inspect(reason)
+            Logger.error(Kernel.inspect(reason))
             {:noreply, state}
         end
       end

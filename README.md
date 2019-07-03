@@ -5,8 +5,7 @@
 ## Database config
 
 ```sql
-use fluminus_server
-create table if not exists fluminus_server_dev.pn(
+create table if not exists fluminus.pn(
 	username varchar(255),
   idsrv varchar(1023),
   jwt varchar(1023),
@@ -14,7 +13,7 @@ create table if not exists fluminus_server_dev.pn(
   entry_time timestamp DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
 set time_zone='+08:00';
-create table if not exists fluminus_server_dev.notification(
+create table if not exists fluminus.notification(
 	user_id varchar(255),
     id integer
 );
@@ -66,6 +65,7 @@ export API_SERVER_PORT=23333
 mix phx.gen.secret
 export SECRET_KEY_BASE=[the secret generated just now]
 export DATABASE_URL=ecto://[username]:[password]@localhost/[database_name]
+mix phx.digest
 mix deps.get --only prod
 MIX_ENV=prod mix phx.server
 ```
