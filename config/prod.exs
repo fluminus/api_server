@@ -10,7 +10,7 @@ use Mix.Config
 # which you should run after static files are built and
 # before starting your production server.
 config :fluminus_server, FluminusServerWeb.Endpoint,
-  url: [host: "localhost", port: 23333],
+  url: [host: "localhost", port: 23333]
 
 # Do not print debug messages in production
 config :logger, level: :info
