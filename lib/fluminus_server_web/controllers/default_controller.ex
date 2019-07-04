@@ -13,7 +13,7 @@ defmodule PeriodicTask do
 
   require Logger
 
-  @fetch_interval 5000
+  @fetch_interval 30000
   @limit 1
   @renew_count 20
 
