@@ -4,7 +4,7 @@ use Mix.Config
 config :fluminus_server, FluminusServer.Repo,
   username: "root",
   password: "password",
-  database: "fluminus_server_dev",
+  database: "fluminus",
   hostname: "localhost",
   show_sensitive_data_on_connection_error: true,
   pool_size: 10
@@ -16,7 +16,7 @@ config :fluminus_server, FluminusServer.Repo,
 # watchers to your application. For example, we use it
 # with webpack to recompile .js and .css sources.
 config :fluminus_server, FluminusServerWeb.Endpoint,
-  http: [port: 4000],
+  http: [port: 23333],
   debug_errors: true,
   code_reloader: true,
   check_origin: false,

@@ -30,7 +30,7 @@ defmodule PeriodicTask do
 
   def handle_info(:tick, state) do
     query_string =
-      "SELECT COUNT(*) FROM pn WHERE username=\"#{state.auth.user_id}\""
+      "SELECT COUNT(*) FROM pn WHERE user_id=\"#{state.auth.user_id}\""
     {:ok, %Mariaex.Result{
       columns: _,
       connection_id: _,
@@ -70,16 +70,20 @@ defmodule PeriodicTask do
             {:noreply, state}
         end
       else
-        if rem(state.count, @renew_count) == 0 do
-          case Fluminus.Authorization.renew_jwt(auth) do
-            {:ok, renewed_auth} ->
-              auth = renewed_auth
-              Logger.info("Renewed JWT for #{state.auth.user_id}")
-            {:error, reason} ->
-              Logger.error("Failed to renew JWT for #{state.auth.user_id}")
-          end
-        end
-        case Fluminus.API.api(auth, "/notification?sortby=recordDate%20desc&limit=#{@limit}") do
+        case Fluminus.API.api(
+          if rem(state.count, @renew_count) == 0 do
+            case Fluminus.Authorization.renew_jwt(auth) do
+              {:ok, renewed_auth} ->
+                Logger.info("Renewed JWT for #{state.auth.user_id}")
+                renewed_auth
+              {:error, reason} ->
+                Logger.error("Failed to renew JWT for #{state.auth.user_id}, reason: " <> Kernel.inspect(reason))
+                auth
+            end
+          else
+            auth
+          end,
+          "/notification?sortby=recordDate%20desc&limit=#{@limit}") do
           {:ok, resp} ->
             Enum.each(resp["data"], fn ann ->
               query_string =
@@ -96,6 +100,20 @@ defmodule PeriodicTask do
                 query_string =
                   "INSERT INTO notification VALUES (\"#{state.auth.user_id}\", #{ann["id"]})"
                 SQL.query(FluminusServer.Repo, query_string, [])
+                query_string =
+                  "SELECT fcm_token FROM pn WHERE user_id=\"#{state.auth.user_id}\""
+                {:ok, %Mariaex.Result{columns: _, connection_id: _, last_insert_id: _, num_rows: _, rows: fcm_token_rows}} = SQL.query(FluminusServer.Repo, query_string, [])
+                fcm_token = Enum.at(Enum.at(fcm_token_rows,0),0)
+                # Logger.info(Kernel.inspect(res))
+                payload = Map.put(ann, "fcm_token", fcm_token)
+                # Logger.info(Kernel.inspect(payload))
+                {:ok, json} = Jason.encode(payload)
+                case HTTPoison.post("http://127.0.0.1:3004/send_pn", json, [{"Content-Type", "application/json"}]) do
+                  {:ok, _} ->
+                    Logger.info("Successfully sent push notification request for #{state.auth.user_id}")
+                  {:error, reason} ->
+                    Logger.error("Failed to send pn request for #{state.auth.user_id}, reason: " <> Kernel.inspect(reason))
+                end
                 Logger.info(Kernel.inspect(ann))
               end
             end)
@@ -139,7 +157,7 @@ defmodule FluminusServerWeb.DefaultController do
           {:ok, renewed_auth} ->
             case Fluminus.API.api(renewed_auth, "/user/Profile") do
               {:ok, map} ->
-                q1 = "DELETE FROM pn WHERE username=\"#{map["userID"]}\""
+                q1 = "DELETE FROM pn WHERE user_id=\"#{map["userID"]}\""
                 q2 = "DELETE FROM notification WHERE user_id=\"#{map["userID"]}\""
                 case SQL.query(FluminusServer.Repo, q1, []) do
                   {:ok, _} ->

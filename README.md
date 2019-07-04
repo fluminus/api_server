@@ -5,8 +5,10 @@
 ## Database config
 
 ```sql
+drop table if exists fluminus.pn;
+drop table if exists fluminus.notification;
 create table if not exists fluminus.pn(
-	username varchar(255),
+	user_id varchar(255) primary key,
   idsrv varchar(1023),
   jwt varchar(1023),
   fcm_token varchar(255),
@@ -15,7 +17,7 @@ create table if not exists fluminus.pn(
 set time_zone='+08:00';
 create table if not exists fluminus.notification(
 	user_id varchar(255),
-    id integer
+  id integer
 );
 ```
 

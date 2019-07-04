@@ -34,6 +34,7 @@ defmodule FluminusServer.MixProject do
   defp deps do
     [
       {:fluminus, "~> 0.2.3"},
+      {:httpoison, "~> 1.5"},
       {:phoenix, "~> 1.4.7"},
       {:phoenix_pubsub, "~> 1.1"},
       {:phoenix_ecto, "~> 4.0"},
