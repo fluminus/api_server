@@ -25,6 +25,13 @@ defmodule FluminusServer.Application do
           }
           case Fluminus.Authorization.renew_jwt(auth) do
             {:ok, renewed_auth} ->
+              query_string = "UPDATE pn SET idsrv='#{renewed_auth.client.cookies["idsrv"]}', jwt='#{renewed_auth.jwt}', entry_time=curtime() WHERE user_id='#{user_id}'"
+              case SQL.query(FluminusServer.Repo, query_string, []) do
+                {:ok, _} ->
+                  Logger.info("Resumed session for #{user_id}")
+
+                _ -> :error
+              end
               %Fluminus.Authorization{
                 client: %Fluminus.HTTPClient{
                   cookies: %{"idsrv" => renewed_idsrv}
