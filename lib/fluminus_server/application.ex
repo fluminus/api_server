@@ -17,11 +17,28 @@ defmodule FluminusServer.Application do
           user_id = Enum.at(row, 0)
           idsrv = Enum.at(row, 1)
           jwt = Enum.at(row, 2)
-          GenServer.start(PeriodicTask, %Authorization{
-            idsrv: idsrv,
-            jwt: jwt,
-            user_id: user_id
-          })
+          auth = %Fluminus.Authorization{
+            client: %Fluminus.HTTPClient{
+              cookies: %{"idsrv" => idsrv}
+            },
+            jwt: jwt
+          }
+          case Fluminus.Authorization.renew_jwt(auth) do
+            {:ok, renewed_auth} ->
+              %Fluminus.Authorization{
+                client: %Fluminus.HTTPClient{
+                  cookies: %{"idsrv" => renewed_idsrv}
+                },
+                jwt: renewed_jwt
+              } = renewed_auth
+              GenServer.start(PeriodicTask, %Authorization{
+                idsrv: renewed_idsrv,
+                jwt: renewed_jwt,
+                user_id: user_id
+              })
+            {:error, reason} ->
+              Logger.error(Kernel.inspect(reason))
+          end
         end)
         Logger.info("Initialized!")
       _ -> :error
